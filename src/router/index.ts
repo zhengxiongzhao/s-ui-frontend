@@ -28,7 +28,7 @@ const routes = [
         path: '/clients',
         name: 'pages.clients',
         component: () => import('@/views/Clients.vue'),
-      },  
+      },
       {
         path: '/outbounds',
         name: 'pages.outbounds',
@@ -43,6 +43,11 @@ const routes = [
         path: '/endpoints',
         name: 'pages.endpoints',
         component: () => import('@/views/Endpoints.vue'),
+      },
+      {
+        path: '/nodes',
+        name: 'pages.nodes',
+        component: () => import('@/views/Nodes.vue'),
       },
       {
         path: '/rules',
