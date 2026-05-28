@@ -290,13 +290,13 @@ const apiSchemes = ['http', 'https']
 
 const tableHeaders = computed(() => [
   { title: t('node.statusLabel'), key: 'status', sortable: true, width: '120px' },
-  { title: '', key: 'enabled', sortable: false, width: '60px' },
   { title: t('node.name'), key: 'name', sortable: true },
   { title: t('type'), key: 'type', sortable: true, width: '100px' },
   { title: t('node.publicIp'), key: 'publicIp', sortable: false, width: '140px' },
   { title: t('node.configStatusLabel'), key: 'configStatus', sortable: false, width: '130px' },
   { title: t('node.lastSeen'), key: 'lastSeen', sortable: true, width: '180px' },
   { title: '', key: 'lastError', sortable: false, width: '40px' },
+  { title: t('enable'), key: 'enabled', sortable: false, width: '80px' },
   { title: t('actions.action'), key: 'actions', sortable: false, width: '120px' },
 ])
 
