@@ -1,24 +1,27 @@
 
 <template>
-  <ClientModal 
+  <ClientModal
     v-model="modal.visible"
     :visible="modal.visible"
     :id="modal.id"
     :groups="groups"
     :inboundTags="inboundTags"
+    :nodes="nodes"
     @close="closeModal"
   />
-  <ClientAddBulk 
+  <ClientAddBulk
     v-model="addBulkModal"
     :visible="addBulkModal"
     :groups="groups"
     :inboundTags="inboundTags"
+    :nodes="nodes"
     @close="closeAddBulk"
   />
-  <ClientEditBulk 
+  <ClientEditBulk
     v-model="editBulkModal"
     :visible="editBulkModal"
     :inboundTags="inboundTags"
+    :nodes="nodes"
     :clients="clients"
     @close="closeEditBulk"
   />
@@ -303,6 +306,10 @@ const inbounds = computed((): any[] => {
 const inboundTags = computed((): any[] => {
   if (!inbounds.value) return []
   return inbounds.value?.filter(i => i.tag != "" && i.users).map(i => { return { title: i.tag, value: i.id } })
+})
+
+const nodes = computed((): any[] => {
+  return Data().nodes ?? []
 })
 
 const groups = computed((): string[] => {

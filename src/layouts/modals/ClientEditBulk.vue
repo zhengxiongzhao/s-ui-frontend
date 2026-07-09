@@ -60,6 +60,18 @@
                   ></v-select>
                 </v-col>
               </v-row>
+              <v-row v-if="actionMode === 'add_nodes' || actionMode === 'remove_nodes'">
+                <v-col cols="12" sm="8">
+                  <v-select
+                    v-model="editData.nodeTags"
+                    :items="nodeItems"
+                    :label="$t('client.nodeTags')"
+                    multiple
+                    chips
+                    hide-details
+                  ></v-select>
+                </v-col>
+              </v-row>
             </v-card-text>
           </v-card>
 
@@ -97,7 +109,7 @@ import Data from '@/store/modules/data';
 import { Client } from '@/types/clients';
 
 export default {
-  props: ['visible', 'clients', 'inboundTags'],
+  props: ['visible', 'clients', 'inboundTags', 'nodes'],
   emits: ['close'],
   components: { Users },
   data() {
@@ -108,6 +120,8 @@ export default {
         { title: i18n.global.t('bulk.changeLimits'), value: 'change_limits' },
         { title: i18n.global.t('bulk.addInbounds'), value: 'add_inbounds' },
         { title: i18n.global.t('bulk.removeInbounds'), value: 'remove_inbounds' },
+        { title: i18n.global.t('bulk.addNodes'), value: 'add_nodes' },
+        { title: i18n.global.t('bulk.removeNodes'), value: 'remove_nodes' },
         { title: i18n.global.t('actions.delbulk'), value: 'delete_bulk' },
       ],
       editData: {
@@ -115,6 +129,7 @@ export default {
         addDays: 0,
         addVolume: 0,
         inboundTags: [] as number[],
+        nodeTags: [] as number[],
       },
       selectedClients: {
         model: 'none',
@@ -125,6 +140,7 @@ export default {
   methods: {
     onActionChange() {
       this.editData.inboundTags = []
+      this.editData.nodeTags = []
     },
     closeModal() {
       this.$emit('close')
@@ -172,6 +188,24 @@ export default {
             c.inbounds = c.inbounds.filter((i: number) => !this.editData.inboundTags.includes(i))
           })
           break
+        case 'add_nodes':
+          targetClients.forEach((c: Client) => {
+            if (!c.nodes) c.nodes = []
+            this.editData.nodeTags.forEach((t: number) => {
+              if (!c.nodes.includes(t)) {
+                c.nodes.push(t)
+              }
+            })
+            c.nodes = c.nodes.sort()
+          })
+          break
+        case 'remove_nodes':
+          targetClients.forEach((c: Client) => {
+            if (c.nodes) {
+              c.nodes = c.nodes.filter((i: number) => !this.editData.nodeTags.includes(i))
+            }
+          })
+          break
         case 'delete_bulk':
           const success = await Data().save("clients", "delbulk", targetClients.map((c: Client) => c.id))
           if (success) this.closeModal()
@@ -183,11 +217,17 @@ export default {
       this.loading = false
     },
   },
+  computed: {
+    nodeItems(): {title: string, value: number}[] {
+      if (!this.nodes || this.nodes.length === 0) return []
+      return this.nodes.map((n: any) => ({ title: n.name, value: n.id }))
+    },
+  },
   watch: {
     visible(newVal) {
       if (newVal) {
         this.actionMode = 'change_limits'
-        this.editData = { enable: true, addDays: 0, addVolume: 0, inboundTags: [] }
+        this.editData = { enable: true, addDays: 0, addVolume: 0, inboundTags: [], nodeTags: [] }
         this.selectedClients = { model: 'none', values: [] }
       }
     },

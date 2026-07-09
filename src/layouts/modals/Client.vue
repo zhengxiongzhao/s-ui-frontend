@@ -122,6 +122,22 @@
                   </v-select>
                 </v-col>
               </v-row>
+              <v-row>
+                <v-col>
+                  <v-select
+                    v-model="clientNodes"
+                    :items="nodeItems"
+                    :label="$t('client.nodeTags')"
+                    clearable
+                    multiple
+                    chips
+                    hide-details>
+                    <template v-slot:append>
+                      <v-icon @click="setAllNodes" icon="mdi-set-all" v-tooltip:top="$t('all')" />
+                    </template>
+                  </v-select>
+                </v-col>
+              </v-row>
             </v-window-item>
             <v-window-item value="t2">
               <v-row>
@@ -233,7 +249,7 @@ import Data from '@/store/modules/data'
 import { locale } from '@/locales'
 
 export default {
-  props: ['visible', 'id', 'inboundTags', 'groups'],
+  props: ['visible', 'id', 'inboundTags', 'groups', 'nodes'],
   emits: ['close'],
   data() {
     return {
@@ -297,6 +313,9 @@ export default {
     setAllInbounds(){
       this.client.inbounds = this.inboundTags.map((i:any) => i.value).sort()
     },
+    setAllNodes(){
+      this.client.nodes = this.nodeItems.map((i:any) => i.value).sort()
+    },
     shuffle(k?:string) {
       shuffleConfigs(this.clientConfig, k)
     },
@@ -311,6 +330,14 @@ export default {
     clientInbounds: {
       get() { return this.client.inbounds.length>0 ? this.client.inbounds.sort() : [] },
       set(v:number[]) { this.client.inbounds = v.length == 0 ?  [] : v.sort() }
+    },
+    clientNodes: {
+      get() { return this.client.nodes && this.client.nodes.length>0 ? this.client.nodes.sort() : [] },
+      set(v:number[]) { this.client.nodes = v.length == 0 ? [] : v.sort() }
+    },
+    nodeItems(): {title: string, value: number}[] {
+      if (!this.nodes || this.nodes.length === 0) return []
+      return this.nodes.map((n: any) => ({ title: n.name, value: n.id }))
     },
     expDate: {
       get() { return this.client.expiry},

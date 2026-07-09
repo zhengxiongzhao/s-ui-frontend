@@ -77,6 +77,22 @@
               </v-select>
             </v-col>
           </v-row>
+          <v-row>
+            <v-col>
+              <v-select
+                v-model="bulkData.clientNodes"
+                :items="nodeItems"
+                :label="$t('client.nodeTags')"
+                multiple
+                chips
+                hide-details
+              >
+                <template v-slot:append>
+                  <v-icon @click="setAllNodes" icon="mdi-set-all" v-tooltip:top="$t('all')" />
+                </template>
+              </v-select>
+            </v-col>
+          </v-row>
         </v-container>
       </v-card-text>
       <v-card-actions>
@@ -110,7 +126,7 @@ import { i18n } from '@/locales'
 import Data from '@/store/modules/data'
 
 export default {
-  props: ['visible', 'inboundTags', 'groups'],
+  props: ['visible', 'inboundTags', 'groups', 'nodes'],
   emits: ['close'],
   data() {
     return {
@@ -120,7 +136,8 @@ export default {
         name: <any[]>[],
         desc: <any[]>[],
         group: '',
-        clientInbounds: [],
+        clientInbounds: <number[]>[],
+        clientNodes: <number[]>[],
         expiry: 0,
         Volume: 0,
         delayStart: false,
@@ -143,6 +160,7 @@ export default {
         desc: [],
         group: '',
         clientInbounds: [],
+        clientNodes: [],
         expiry: 0,
         Volume: 0,
         delayStart: false,
@@ -168,6 +186,7 @@ export default {
           name: name,
           config: randomConfigs(name),
           inbounds: this.bulkData.clientInbounds.length > 0 ? this.bulkData.clientInbounds.sort() : [],
+          nodes: this.bulkData.clientNodes.length > 0 ? this.bulkData.clientNodes.sort() : [],
           links: [],
           volume: this.bulkData.Volume*(1024 ** 3),
           expiry: (this.bulkData.delayStart && !this.bulkData.autoReset) ? 0 : this.bulkData.expiry,
@@ -212,9 +231,17 @@ export default {
     },
     setAllInbounds(){
       this.bulkData.clientInbounds = this.inboundTags.map((i:any) => i.value).sort()
+    },
+    setAllNodes(){
+      this.bulkData.clientNodes = this.nodeItems.map((i:any) => i.value).sort()
     }
   },
-  computed: {},
+  computed: {
+    nodeItems(): {title: string, value: number}[] {
+      if (!this.nodes || this.nodes.length === 0) return []
+      return this.nodes.map((n: any) => ({ title: n.name, value: n.id }))
+    },
+  },
   watch: {
     visible(newValue) {
       if (newValue) {
