@@ -63,8 +63,7 @@
           <v-icon
             icon="mdi-drag"
             class="drag-handle"
-            :class="{ 'dragging': draggingIndex === nodes.indexOf(item) }"
-            @mousedown.prevent
+            :class="{ 'dragging': draggingIndex === findNodeIndex(item.id) }"
             draggable="true"
             @dragstart="onDragStart($event, item)"
             @dragover.prevent="onDragOver($event, item)"
@@ -107,8 +106,8 @@
         </template>
 
         <template v-slot:item.sort="{ item }">
-          <div class="sort-index" :class="{ 'drag-over': dragOverIndex === nodes.indexOf(item) }">
-            {{ nodes.indexOf(item) + 1 }}
+          <div class="sort-index" :class="{ 'drag-over': dragOverIndex === findNodeIndex(item.id) }">
+            {{ findNodeIndex(item.id) + 1 }}
           </div>
         </template>
 
@@ -553,8 +552,12 @@ const toggleNodeEnabled = async (node: NodeItem) => {
   }
 }
 
+const findNodeIndex = (id: number): number => {
+  return nodes.value.findIndex(n => n.id === id)
+}
+
 const onDragStart = (event: DragEvent, item: NodeItem) => {
-  draggingIndex.value = nodes.value.indexOf(item)
+  draggingIndex.value = findNodeIndex(item.id)
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move'
     event.dataTransfer.setData('text/plain', '')
@@ -562,7 +565,7 @@ const onDragStart = (event: DragEvent, item: NodeItem) => {
 }
 
 const onDragOver = (event: DragEvent, item: NodeItem) => {
-  const index = nodes.value.indexOf(item)
+  const index = findNodeIndex(item.id)
   if (draggingIndex.value !== null && draggingIndex.value !== index) {
     dragOverIndex.value = index
   }
@@ -575,7 +578,7 @@ const onDragLeave = () => {
 const onDrop = (event: DragEvent, item: NodeItem) => {
   if (draggingIndex.value === null) return
   
-  const targetIndex = nodes.value.indexOf(item)
+  const targetIndex = findNodeIndex(item.id)
   if (draggingIndex.value === targetIndex) return
   
   // 重新排序数组
@@ -599,7 +602,9 @@ const onDragEnd = () => {
 
 const saveAllSorts = async () => {
   const sortData = nodes.value.map(node => ({ id: node.id, sort: node.sort }))
-  const msg = await HttpUtils.post('api/updateNodeSort', sortData)
+  const msg = await HttpUtils.post('api/updateNodeSort', sortData, {
+    headers: { 'Content-Type': 'application/json' },
+  })
   if (msg.success) {
     showSnackbar('success', t('node.sortUpdated'))
   } else {
