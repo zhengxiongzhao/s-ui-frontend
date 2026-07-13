@@ -6,7 +6,7 @@
     <v-btn
       icon
       variant="text"
-      href="https://donate.alireza0.dev"
+      href="https://donate.zxzhao.com"
       target="_blank"
       rel="noopener"
       class="donate-btn"

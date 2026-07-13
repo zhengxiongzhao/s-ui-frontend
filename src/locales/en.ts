@@ -193,6 +193,10 @@ export default {
     configNotSynced: "Not synced",
     configUnknown: "Unknown",
     configError: "Error",
+    sort: "Sort",
+    autoSync: "Auto Sync",
+    sortUpdated: "Sort updated",
+    autoSyncUpdated: "Auto sync updated",
   },
   menu: {
     logout: "Logout",

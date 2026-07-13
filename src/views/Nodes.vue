@@ -59,6 +59,21 @@
         class="nodes-table"
         hover
       >
+        <template v-slot:item.drag="{ item }">
+          <v-icon
+            icon="mdi-drag"
+            class="drag-handle"
+            :class="{ 'dragging': draggingIndex === nodes.indexOf(item) }"
+            @mousedown.prevent
+            draggable="true"
+            @dragstart="onDragStart($event, item)"
+            @dragover.prevent="onDragOver($event, item)"
+            @dragleave="onDragLeave"
+            @drop.prevent="onDrop($event, item)"
+            @dragend="onDragEnd"
+          />
+        </template>
+
         <template v-slot:item.enabled="{ item }">
           <v-switch
             v-model="item.enabled"
@@ -89,6 +104,24 @@
           <v-chip size="x-small" :color="item.type === 'local' ? 'info' : 'primary'" variant="tonal">
             {{ item.type }}
           </v-chip>
+        </template>
+
+        <template v-slot:item.sort="{ item }">
+          <div class="sort-index" :class="{ 'drag-over': dragOverIndex === nodes.indexOf(item) }">
+            {{ nodes.indexOf(item) + 1 }}
+          </div>
+        </template>
+
+        <template v-slot:item.autoSync="{ item }">
+          <v-switch
+            v-model="item.autoSync"
+            hide-details
+            density="compact"
+            color="primary"
+            @update:model-value="toggleNodeAutoSync(item)"
+            class="ma-0"
+            style="width: 48px;"
+          />
         </template>
 
         <template v-slot:item.configStatus="{ item }">
@@ -260,6 +293,8 @@ interface NodeItem {
   name: string
   type: NodeType
   enabled: boolean
+  sort: number
+  autoSync: boolean
   apiHost: string
   apiPort: number
   apiScheme: string
@@ -279,6 +314,8 @@ const nodes = ref<NodeItem[]>([])
 const nodeConfigVersion = ref(0)
 const refreshing = ref(false)
 const pushing = ref(false)
+const draggingIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
 const nodeTypes: NodeType[] = ['local', 'remote']
 const publicHostModes = [
   { title: t('node.hostModeAgent'), value: 'agent' },
@@ -297,6 +334,9 @@ const tableHeaders = computed(() => [
   { title: t('node.lastSeen'), key: 'lastSeen', sortable: true, width: '180px' },
   { title: '', key: 'lastError', sortable: false, width: '40px' },
   { title: t('enable'), key: 'enabled', sortable: false, width: '80px' },
+  { title: '', key: 'drag', sortable: false, width: '40px' },
+  { title: t('node.sort'), key: 'sort', sortable: false, width: '60px' },
+  { title: t('node.autoSync'), key: 'autoSync', sortable: false, width: '100px' },
   { title: t('actions.action'), key: 'actions', sortable: false, width: '120px' },
 ])
 
@@ -305,6 +345,8 @@ const emptyNode = (): NodeItem => ({
   name: '',
   type: 'remote',
   enabled: true,
+  sort: 0,
+  autoSync: true,
   apiHost: '',
   apiPort: 2097,
   apiScheme: 'http',
@@ -511,6 +553,72 @@ const toggleNodeEnabled = async (node: NodeItem) => {
   }
 }
 
+const onDragStart = (event: DragEvent, item: NodeItem) => {
+  draggingIndex.value = nodes.value.indexOf(item)
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', '')
+  }
+}
+
+const onDragOver = (event: DragEvent, item: NodeItem) => {
+  const index = nodes.value.indexOf(item)
+  if (draggingIndex.value !== null && draggingIndex.value !== index) {
+    dragOverIndex.value = index
+  }
+}
+
+const onDragLeave = () => {
+  dragOverIndex.value = null
+}
+
+const onDrop = (event: DragEvent, item: NodeItem) => {
+  if (draggingIndex.value === null) return
+  
+  const targetIndex = nodes.value.indexOf(item)
+  if (draggingIndex.value === targetIndex) return
+  
+  // 重新排序数组
+  const draggedItem = nodes.value[draggingIndex.value]
+  nodes.value.splice(draggingIndex.value, 1)
+  nodes.value.splice(targetIndex, 0, draggedItem)
+  
+  // 更新所有节点的 sort 值
+  nodes.value.forEach((node, index) => {
+    node.sort = index
+  })
+  
+  // 批量保存排序
+  saveAllSorts()
+}
+
+const onDragEnd = () => {
+  draggingIndex.value = null
+  dragOverIndex.value = null
+}
+
+const saveAllSorts = async () => {
+  const sortData = nodes.value.map(node => ({ id: node.id, sort: node.sort }))
+  const msg = await HttpUtils.post('api/updateNodeSort', sortData)
+  if (msg.success) {
+    showSnackbar('success', t('node.sortUpdated'))
+  } else {
+    showSnackbar('error', msg.msg || t('node.actionFailed'))
+    await loadNodes()
+  }
+}
+
+const toggleNodeAutoSync = async (node: NodeItem) => {
+  const msg = await HttpUtils.post('api/toggleNodeAutoSync', { id: node.id })
+  if (msg.success) {
+    node.autoSync = msg.obj?.autoSync ?? node.autoSync
+    showSnackbar('success', t('node.autoSyncUpdated'))
+  } else {
+    node.autoSync = !node.autoSync
+    showSnackbar('error', msg.msg || t('node.actionFailed'))
+  }
+}
+
 const saveNode = async () => {
   setLoading(true)
   try {
@@ -669,6 +777,43 @@ onMounted(loadNodes)
 .nodes-table :deep(th) {
   font-weight: 600 !important;
   white-space: nowrap;
+}
+
+.drag-handle {
+  cursor: grab;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+}
+
+.drag-handle.dragging {
+  cursor: grabbing;
+  opacity: 0.3;
+}
+
+.sort-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(var(--v-theme-surface-variant), 0.3);
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.sort-index.drag-over {
+  background: rgba(var(--v-theme-primary), 0.2);
+  transform: scale(1.1);
+}
+
+.nodes-table :deep(tr) {
+  transition: background-color 0.2s;
 }
 
 .details-pre {

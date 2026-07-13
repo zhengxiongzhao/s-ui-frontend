@@ -193,6 +193,10 @@ export default {
     configNotSynced: "未同步",
     configUnknown: "未知",
     configError: "错误",
+    sort: "排序",
+    autoSync: "自动同步",
+    sortUpdated: "排序已更新",
+    autoSyncUpdated: "自动同步已更新",
   },
   menu: {
     logout: "退出登录",
