@@ -183,6 +183,8 @@ export default {
     stopCore: "停止核心",
     restartCore: "重启核心",
     rotateToken: "轮换 Token",
+    forceSync: "强制同步",
+    forceSyncSuccess: "强制同步完成",
     details: "详情",
     stats: "统计",
     actionSuccess: "操作成功",

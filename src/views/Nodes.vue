@@ -153,6 +153,7 @@
                 <v-list-item prepend-icon="mdi-stop" :title="$t('node.stopCore')" @click="postNodeAction('stopNodeCore', item.id)" />
                 <v-list-item prepend-icon="mdi-restart" :title="$t('node.restartCore')" @click="postNodeAction('restartNodeCore', item.id)" />
                 <v-divider class="my-1" />
+                <v-list-item prepend-icon="mdi-cloud-upload" :title="$t('node.forceSync')" @click="forceSyncNode(item)" />
                 <v-list-item prepend-icon="mdi-key-change" :title="$t('node.rotateToken')" @click="rotateToken(item)" />
                 <v-list-item prepend-icon="mdi-information" :title="$t('node.details')" @click="loadNodeInfo(item)" />
                 <v-list-item prepend-icon="mdi-chart-line" :title="$t('node.stats')" @click="loadNodeStats(item)" />
@@ -668,6 +669,18 @@ const rotateToken = async (node: NodeItem) => {
       content: msg.obj?.token ?? '',
     }
     showSnackbar('success', t('node.actionSuccess'))
+    await loadNodes()
+  } else {
+    showSnackbar('error', msg.msg || t('node.actionFailed'))
+  }
+  setLoading(false)
+}
+
+const forceSyncNode = async (node: NodeItem) => {
+  setLoading(true)
+  const msg = await HttpUtils.post('api/forceSyncNode', { id: node.id })
+  if (msg.success) {
+    showSnackbar('success', t('node.forceSyncSuccess'))
     await loadNodes()
   } else {
     showSnackbar('error', msg.msg || t('node.actionFailed'))

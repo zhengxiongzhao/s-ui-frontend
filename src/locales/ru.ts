@@ -178,6 +178,8 @@ export default {
     stopCore: "Stop Core",
     restartCore: "Restart Core",
     rotateToken: "Rotate Token",
+    forceSync: "Force Sync",
+    forceSyncSuccess: "Force sync completed",
     details: "Details",
     stats: "Stats",
     actionSuccess: "Action successful",
