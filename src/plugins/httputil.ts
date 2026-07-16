@@ -45,6 +45,10 @@ function _respToMsg(resp: any): Msg {
   const data = resp.data
   if (data == null) {
     return { success: true, msg: "", obj: null }
+  } else if (typeof data === 'string') {
+    // Handle HTML or plain string responses gracefully
+    const preview = data.length > 100 ? data.substring(0, 100) + '...' : data
+    return { success: false, msg: `unknown format: ${preview}`, obj: null }
   } else if (isMsg(data)) {
     if (data.hasOwnProperty('success')) {
         return { success: data.success, msg: data.msg, obj: data.obj || null }
@@ -52,7 +56,9 @@ function _respToMsg(resp: any): Msg {
         return data
     }
   } else {
-    return { success: false, msg: `unknown data: ${data}`, obj: null }
+    const dataStr = JSON.stringify(data)
+    const preview = dataStr.length > 100 ? dataStr.substring(0, 100) + '...' : dataStr
+    return { success: false, msg: `unknown data: ${preview}`, obj: null }
   }
 }
 

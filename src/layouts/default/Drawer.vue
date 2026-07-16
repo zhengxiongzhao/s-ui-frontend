@@ -21,7 +21,7 @@
 
     <v-list density="compact" nav>
       <v-list-item link
-        v-for="item in menu"
+        v-for="item in filteredMenu"
         :key="item.title"
         :to="item.path"
         :active="router.currentRoute.value.path == item.path">
@@ -41,8 +41,10 @@
 import { computed } from 'vue'
 import router from '@/router'
 import { logout } from '@/plugins/httputil'
+import Data from '@/store/modules/data'
 
 const props = defineProps(['isMobile','displayDrawer'])
+const dataStore = Data()
 
 const showDrawer = computed((): boolean => {
   return props.displayDrawer
@@ -63,6 +65,13 @@ const menu = [
   { title: 'pages.admins', icon: 'mdi-account-tie',  path: '/admins' },
   { title: 'pages.settings', icon: 'mdi-cog',  path: '/settings' },
 ]
+
+const filteredMenu = computed(() => {
+  if (dataStore.isAgent) {
+    return menu.filter(item => item.path !== '/nodes')
+  }
+  return menu
+})
 
 const Logout = async () => {
   logout()

@@ -77,7 +77,7 @@
               </v-select>
             </v-col>
           </v-row>
-          <v-row>
+          <v-row v-if="!dataStore.isAgent">
             <v-col>
               <v-select
                 v-model="bulkData.clientNodes"
@@ -186,7 +186,7 @@ export default {
           name: name,
           config: randomConfigs(name),
           inbounds: this.bulkData.clientInbounds.length > 0 ? this.bulkData.clientInbounds.sort() : [],
-          nodes: this.bulkData.clientNodes.length > 0 ? this.bulkData.clientNodes.sort() : [],
+          nodes: this.dataStore.isAgent && this.dataStore.currentNodeId ? [this.dataStore.currentNodeId] : (this.bulkData.clientNodes.length > 0 ? this.bulkData.clientNodes.sort() : []),
           links: [],
           volume: this.bulkData.Volume*(1024 ** 3),
           expiry: (this.bulkData.delayStart && !this.bulkData.autoReset) ? 0 : this.bulkData.expiry,
@@ -237,6 +237,7 @@ export default {
     }
   },
   computed: {
+    dataStore() { return Data() },
     nodeItems(): {title: string, value: number}[] {
       if (!this.nodes || this.nodes.length === 0) return []
       return this.nodes.map((n: any) => ({ title: n.name, value: n.id }))

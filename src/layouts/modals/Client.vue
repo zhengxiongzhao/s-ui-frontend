@@ -122,7 +122,7 @@
                   </v-select>
                 </v-col>
               </v-row>
-              <v-row>
+              <v-row v-if="!dataStore.isAgent">
                 <v-col>
                   <v-select
                     v-model="clientNodes"
@@ -297,6 +297,10 @@ export default {
       // check if delayStart is true and autoReset is false, set expiry to 0
       if (this.client.delayStart && !this.client.autoReset) this.client.expiry = 0
 
+      if (this.dataStore.isAgent && this.dataStore.currentNodeId) {
+        this.client.nodes = [this.dataStore.currentNodeId]
+      }
+
       // save data
       this.loading = true
       this.client.config = updateConfigs(this.clientConfig, this.client.name)
@@ -327,6 +331,7 @@ export default {
     }
   },
   computed: {
+    dataStore() { return Data() },
     clientInbounds: {
       get() { return this.client.inbounds.length>0 ? this.client.inbounds.sort() : [] },
       set(v:number[]) { this.client.inbounds = v.length == 0 ?  [] : v.sort() }

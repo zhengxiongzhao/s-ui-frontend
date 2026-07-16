@@ -20,6 +20,8 @@ const Data = defineStore('Data', {
     clients: <any>[],
     tlsConfigs: <any[]>[],
     nodes: <any[]>[],
+    isAgent: false,
+    currentNodeId: 0,
   }),
   actions: {
     async loadData() {
@@ -51,6 +53,8 @@ const Data = defineStore('Data', {
       if (Object.hasOwn(data, 'endpoints')) this.endpoints = data.endpoints ?? []
       if (Object.hasOwn(data, 'tls')) this.tlsConfigs = data.tls ?? []
       if (Object.hasOwn(data, 'nodes')) this.nodes = data.nodes ?? []
+      if (Object.hasOwn(data, 'isAgent')) this.isAgent = data.isAgent
+      if (Object.hasOwn(data, 'currentNodeId')) this.currentNodeId = data.currentNodeId
     },
     async loadInbounds(ids: number[]): Promise<Inbound[]> {
       const options = ids.length > 0 ? {id: ids.join(",")} : {}

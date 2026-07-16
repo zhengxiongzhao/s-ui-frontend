@@ -60,7 +60,7 @@
                   ></v-select>
                 </v-col>
               </v-row>
-              <v-row v-if="actionMode === 'add_nodes' || actionMode === 'remove_nodes'">
+              <v-row v-if="!dataStore.isAgent && (actionMode === 'add_nodes' || actionMode === 'remove_nodes')">
                 <v-col cols="12" sm="8">
                   <v-select
                     v-model="editData.nodeTags"
@@ -116,14 +116,6 @@ export default {
     return {
       loading: false,
       actionMode: 'change_limits',
-      actionModes: [
-        { title: i18n.global.t('bulk.changeLimits'), value: 'change_limits' },
-        { title: i18n.global.t('bulk.addInbounds'), value: 'add_inbounds' },
-        { title: i18n.global.t('bulk.removeInbounds'), value: 'remove_inbounds' },
-        { title: i18n.global.t('bulk.addNodes'), value: 'add_nodes' },
-        { title: i18n.global.t('bulk.removeNodes'), value: 'remove_nodes' },
-        { title: i18n.global.t('actions.delbulk'), value: 'delete_bulk' },
-      ],
       editData: {
         enable: true,
         addDays: 0,
@@ -218,6 +210,22 @@ export default {
     },
   },
   computed: {
+    dataStore() { return Data() },
+    actionModes() {
+      const baseModes = [
+        { title: i18n.global.t('bulk.changeLimits'), value: 'change_limits' },
+        { title: i18n.global.t('bulk.addInbounds'), value: 'add_inbounds' },
+        { title: i18n.global.t('bulk.removeInbounds'), value: 'remove_inbounds' },
+        { title: i18n.global.t('actions.delbulk'), value: 'delete_bulk' },
+      ]
+      if (!this.dataStore.isAgent) {
+        baseModes.splice(3, 0,
+          { title: i18n.global.t('bulk.addNodes'), value: 'add_nodes' },
+          { title: i18n.global.t('bulk.removeNodes'), value: 'remove_nodes' }
+        )
+      }
+      return baseModes
+    },
     nodeItems(): {title: string, value: number}[] {
       if (!this.nodes || this.nodes.length === 0) return []
       return this.nodes.map((n: any) => ({ title: n.name, value: n.id }))
