@@ -159,6 +159,18 @@
         width="100%"
         class="elevation-3 rounded"
         >
+        <template v-slot:item.enable="{ item }">
+          <v-switch
+            :model-value="item.enable"
+            :loading="toggling[item.id]"
+            :disabled="toggling[item.id]"
+            color="success"
+            density="compact"
+            hide-details
+            inset
+            @update:model-value="(val:any) => toggleEnable(item, !!val)"
+          ></v-switch>
+        </template>
         <template v-slot:item.inbounds="{ item }">
           <span>
           <v-tooltip activator="parent" dir="ltr" location="start" v-if="item.inbounds != ''">
@@ -330,6 +342,7 @@ const filterItems = [
 
 const headers = [
   { title: i18n.global.t('client.name'), key: 'name' },
+  { title: i18n.global.t('enable'), key: 'enable' },
   { title: i18n.global.t('client.desc'), key: 'desc' },
   { title: i18n.global.t('client.group'), key: 'group' },
   { title: i18n.global.t('pages.inbounds'), key: 'inbounds', width: 10 },
@@ -362,6 +375,19 @@ const showModal = async (id: number) => {
 }
 const closeModal = () => {
   modal.value.visible = false
+}
+
+const toggling = ref<Record<number, boolean>>({})
+
+const toggleEnable = async (item: any, val: boolean) => {
+  if (item.enable === val) return
+  toggling.value = { ...toggling.value, [item.id]: true }
+  const full = await Data().loadClients(item.id)
+  if (full?.id) {
+    full.enable = val
+    await Data().save("clients", "edit", full)
+  }
+  toggling.value = { ...toggling.value, [item.id]: false }
 }
 
 const delClient = async (id: number) => {
