@@ -289,7 +289,7 @@
             </v-menu>
           </v-card-actions>
         </v-card>
-        <AcmeVue :tls="inTls" />
+        <AcmeVue :tls="inTls" v-if="!isWindows" />
         <EchVue :iTls="inTls" :oTls="outTls" />
       </v-card-text>
       <v-card-actions>
@@ -323,6 +323,7 @@ import HttpUtils from '@/plugins/httputil'
 import { push } from 'notivue'
 import { i18n } from '@/locales'
 import RandomUtil from '@/plugins/randomUtil'
+import Data from '@/store/modules/data'
 export default {
   props: ['visible', 'data', 'id'],
   emits: ['close', 'save'],
@@ -488,6 +489,9 @@ export default {
     }
   },
   computed: {
+    isWindows(): boolean {
+      return Data().os === 'windows'
+    },
     inTls(): iTls {
       return this.tls.server
     },

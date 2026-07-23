@@ -1,5 +1,5 @@
 <template>
-  <Line v-if="loaded" :data="data" :options="<any>options" />
+  <Line v-if="loaded" :data="data" :options="<any>options" :key="theme.global.name" />
 </template>
 
 <script lang="ts">
@@ -112,10 +112,11 @@ export default {
   computed: {
     chartColors() {
       const onSurface = this.theme.current.colors['on-surface']
+      const dark = this.theme.current.dark
       return {
         text: onSurface,
-        gridY: '#888888',
-        gridX: onSurface
+        gridY: dark ? '#333333' : '#88888850',
+        gridX: dark ? '#333333' : '#88888850',
       }
     },
     options() {

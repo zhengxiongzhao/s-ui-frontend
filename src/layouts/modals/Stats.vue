@@ -38,7 +38,7 @@
           ></v-skeleton-loader>
           <template v-else>
             <v-alert :text="$t('noData')" type="warning" variant="outlined" v-if="alert"></v-alert>
-            <Line v-if="loaded" :data="usage" :options="<any>options" />
+            <Line v-if="loaded" :data="usage" :options="<any>options" :key="theme.global.name" />
           </template>
         </v-container>
       </v-card-text>
@@ -143,9 +143,10 @@ export default {
   computed: {
     options() {
       const onSurface = this.theme.current.colors['on-surface']
+      const dark = this.theme.current.dark
       const text = onSurface
-      const gridY = '#888888'
-      const gridX = onSurface
+      const gridY = dark ? '#333333' : '#88888850'
+      const gridX = dark ? '#333333' : '#88888850'
       return {
         ...this.baseOptions,
         plugins: {
