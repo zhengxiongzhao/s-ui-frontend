@@ -189,6 +189,8 @@ export default {
     stats: "Stats",
     actionSuccess: "Action successful",
     actionFailed: "Action failed",
+    syncSubmitted: "Task submitted, syncing in background...",
+    noNodesToSync: "No nodes to sync",
     refreshAllResult: "Refresh completed",
     syncConfigResult: "Config sync completed",
     configSynced: "Synced",

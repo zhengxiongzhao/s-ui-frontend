@@ -189,6 +189,8 @@ export default {
     stats: "统计",
     actionSuccess: "操作成功",
     actionFailed: "操作失败",
+    syncSubmitted: "任务已提交，正在后台同步...",
+    noNodesToSync: "没有需要同步的节点",
     refreshAllResult: "刷新完成",
     syncConfigResult: "同步配置完成",
     configSynced: "已同步",

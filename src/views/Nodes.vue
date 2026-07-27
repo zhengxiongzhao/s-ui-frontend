@@ -127,6 +127,17 @@
           <v-chip v-if="item.type === 'local'" size="small" variant="text" color="grey">
             —
           </v-chip>
+          <!-- 批量同步中：显示实时进度状态 -->
+          <div v-else-if="getNodeSyncStatus(item.id)" class="d-flex align-center">
+            <v-tooltip v-if="getNodeSyncStatus(item.id)?.status === 'error'" :text="getNodeSyncStatus(item.id)?.error || ''" location="top">
+              <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" size="small" color="error" icon="mdi-alert-circle" />
+              </template>
+            </v-tooltip>
+            <v-progress-circular v-else-if="getNodeSyncStatus(item.id)?.status === 'running' || getNodeSyncStatus(item.id)?.status === 'pending'" indeterminate size="16" width="2" color="primary" />
+            <v-icon v-else size="small" color="success" icon="mdi-check-circle" />
+          </div>
+          <!-- 正常配置状态显示 -->
           <v-chip v-else :color="configSyncColor(item)" size="small" variant="tonal">
             <v-icon start size="x-small" :icon="configSyncIcon(item)" />
             {{ configSyncText(item) }}
@@ -280,7 +291,7 @@
 
 <script lang="ts" setup>
 import HttpUtils from '@/plugins/httputil'
-import { computed, inject, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
@@ -316,6 +327,20 @@ const refreshing = ref(false)
 const pushing = ref(false)
 const draggingIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
+
+// 批量同步进度状态
+interface SyncBatchState {
+  batchId: string
+  taskType: 'syncInfo' | 'pushConfig'
+  total: number
+  done: number
+  success: number
+  failed: number
+  nodeStatuses: Record<number, { status: string; error?: string }>
+  polling: boolean
+}
+const syncBatch = ref<SyncBatchState | null>(null)
+let pollTimer: ReturnType<typeof setInterval> | null = null
 const nodeTypes: NodeType[] = ['local', 'remote']
 const publicHostModes = [
   { title: t('node.hostModeAgent'), value: 'agent' },
@@ -468,9 +493,11 @@ const setLoading = (value: boolean) => {
   loading.value = value
 }
 
-const loadNodes = async () => {
+const loadNodes = async (batchId?: string) => {
   setLoading(true)
-  const msg = await HttpUtils.get('api/nodes')
+  const params: Record<string, any> = {}
+  if (batchId) params.batchId = batchId
+  const msg = await HttpUtils.get('api/nodes', params)
   if (msg.success) {
     const data = msg.obj ?? {}
     nodeConfigVersion.value = Number(data.nodeConfigVersion ?? 0)
@@ -478,8 +505,33 @@ const loadNodes = async () => {
       ...node,
       publicPortMap: normalizePortMap(node.publicPortMap),
     }))
+    // 处理批次进度数据
+    if (data.syncBatch) {
+      updateSyncBatchFromServer(data.syncBatch)
+    }
   }
   setLoading(false)
+}
+
+// 从服务端返回的批次数据更新本地状态
+const updateSyncBatchFromServer = (batch: any) => {
+  if (!batch || !batch.batchId) return
+  const nodeStatuses: Record<number, { status: string; error?: string }> = {}
+  if (batch.nodes) {
+    for (const [, ns] of Object.entries(batch.nodes) as [string, any][]) {
+      nodeStatuses[ns.nodeId] = { status: ns.status, error: ns.error }
+    }
+  }
+  syncBatch.value = {
+    batchId: batch.batchId,
+    taskType: batch.taskType,
+    total: batch.total ?? 0,
+    done: batch.done ?? 0,
+    success: batch.success ?? 0,
+    failed: batch.failed ?? 0,
+    nodeStatuses,
+    polling: syncBatch.value?.polling ?? false,
+  }
 }
 
 const refreshAllNodes = async () => {
@@ -487,12 +539,17 @@ const refreshAllNodes = async () => {
   const msg = await HttpUtils.post('api/syncAllNodes', null)
   if (msg.success) {
     const obj = msg.obj ?? {}
-    showSnackbar('success', `${t('node.refreshAllResult')}: ${obj.successCount ?? 0} ${t('success')}, ${obj.failCount ?? 0} ${t('failed')}`)
+    if (obj.batchId) {
+      showSnackbar('info', t('node.syncSubmitted'))
+      startPolling(obj.batchId, 'syncInfo')
+    } else {
+      showSnackbar('info', t('node.noNodesToSync'))
+      refreshing.value = false
+    }
   } else {
     showSnackbar('error', msg.msg || t('node.actionFailed'))
+    refreshing.value = false
   }
-  await loadNodes()
-  refreshing.value = false
 }
 
 const pushConfigToAll = async () => {
@@ -500,12 +557,67 @@ const pushConfigToAll = async () => {
   const msg = await HttpUtils.post('api/pushConfigToAll', null)
   if (msg.success) {
     const obj = msg.obj ?? {}
-    showSnackbar('success', `${t('node.syncConfigResult')}: ${obj.successCount ?? 0} ${t('success')}, ${obj.failCount ?? 0} ${t('failed')}`)
+    if (obj.batchId) {
+      showSnackbar('info', t('node.syncSubmitted'))
+      startPolling(obj.batchId, 'pushConfig')
+    } else {
+      showSnackbar('info', t('node.noNodesToSync'))
+      pushing.value = false
+    }
   } else {
     showSnackbar('error', msg.msg || t('node.actionFailed'))
+    pushing.value = false
   }
-  await loadNodes()
+}
+
+// 启动轮询
+const startPolling = (batchId: string, taskType: 'syncInfo' | 'pushConfig') => {
+  stopPolling()
+  syncBatch.value = {
+    batchId,
+    taskType,
+    total: 0,
+    done: 0,
+    success: 0,
+    failed: 0,
+    nodeStatuses: {},
+    polling: true,
+  }
+  pollTimer = setInterval(async () => {
+    await loadNodes(batchId)
+    if (syncBatch.value && syncBatch.value.done >= syncBatch.value.total && syncBatch.value.total > 0) {
+      finishPolling()
+    }
+  }, 3000)
+}
+
+// 停止轮询
+const stopPolling = () => {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
+  }
+  if (syncBatch.value) {
+    syncBatch.value.polling = false
+  }
+}
+
+// 完成轮询，展示结果
+const finishPolling = () => {
+  stopPolling()
+  if (syncBatch.value) {
+    const sb = syncBatch.value
+    const msg = `${sb.taskType === 'pushConfig' ? t('node.syncConfigResult') : t('node.refreshAllResult')}: ${sb.success} ${t('success')}, ${sb.failed} ${t('failed')}`
+    showSnackbar(sb.failed > 0 ? 'warning' : 'success', msg)
+  }
+  refreshing.value = false
   pushing.value = false
+}
+
+// 获取节点同步状态（用于表格显示）
+const getNodeSyncStatus = (nodeId: number): { status: string; error?: string } | null => {
+  if (!syncBatch.value || !syncBatch.value.nodeStatuses[nodeId]) return null
+  return syncBatch.value.nodeStatuses[nodeId]
 }
 
 const showEditor = (node?: NodeItem) => {
@@ -741,7 +853,24 @@ const deleteNode = async () => {
   setLoading(false)
 }
 
-onMounted(loadNodes)
+onMounted(() => {
+  loadNodes()
+  // 检查是否有未完成的批次，自动恢复轮询
+  const checkActiveBatch = async () => {
+    await loadNodes()
+    if (syncBatch.value && syncBatch.value.polling && !pollTimer) {
+      // 后端已无活跃批次但前端状态残留，清理
+      if (syncBatch.value.total === 0) {
+        syncBatch.value = null
+      }
+    }
+  }
+  checkActiveBatch()
+})
+
+onUnmounted(() => {
+  stopPolling()
+})
 </script>
 
 <style scoped>
