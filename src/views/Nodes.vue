@@ -493,8 +493,8 @@ const setLoading = (value: boolean) => {
   loading.value = value
 }
 
-const loadNodes = async (batchId?: string) => {
-  setLoading(true)
+const loadNodes = async (batchId?: string, silent = true) => {
+  if (!silent) setLoading(true)
   const params: Record<string, any> = {}
   if (batchId) params.batchId = batchId
   const msg = await HttpUtils.get('api/nodes', params)
@@ -508,9 +508,17 @@ const loadNodes = async (batchId?: string) => {
     // 处理批次进度数据
     if (data.syncBatch) {
       updateSyncBatchFromServer(data.syncBatch)
+    } else if (data.activeBatches) {
+      // 页面加载时自动发现服务端活跃批次
+      const active = data.activeBatches.pushConfig ?? data.activeBatches.syncInfo
+      if (active) {
+        updateSyncBatchFromServer(active)
+      } else {
+        syncBatch.value = null
+      }
     }
   }
-  setLoading(false)
+  if (!silent) setLoading(false)
 }
 
 // 从服务端返回的批次数据更新本地状态
@@ -853,19 +861,12 @@ const deleteNode = async () => {
   setLoading(false)
 }
 
-onMounted(() => {
-  loadNodes()
-  // 检查是否有未完成的批次，自动恢复轮询
-  const checkActiveBatch = async () => {
-    await loadNodes()
-    if (syncBatch.value && syncBatch.value.polling && !pollTimer) {
-      // 后端已无活跃批次但前端状态残留，清理
-      if (syncBatch.value.total === 0) {
-        syncBatch.value = null
-      }
-    }
+onMounted(async () => {
+  await loadNodes()
+  // 自动恢复未完成的批次轮询（页面刷新后从服务端发现活跃批次）
+  if (syncBatch.value && syncBatch.value.batchId && syncBatch.value.total > 0 && syncBatch.value.done < syncBatch.value.total) {
+    startPolling(syncBatch.value.batchId, syncBatch.value.taskType)
   }
-  checkActiveBatch()
 })
 
 onUnmounted(() => {
